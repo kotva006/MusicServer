@@ -1,35 +1,38 @@
 package com.ryanstoast.MusicServer;
 
-
-import javafx.application.Application;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
-import javafx.stage.Stage;
-
-import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Properties;
 
 
 public class Main{
 
-    private static String root = "path_to_root_music_dir";
+    public static String CONFIG_FILE = "config.properties";
+    public static String ROOT_KEY = "root";
 
     public static void main(String[] args) {
 
-        //read_config
         try {
-            FileTree.setRoot(root);
-            FileTree.populate();
-            //launch(args);
+            //read_config
+            FileInputStream fis = new FileInputStream(CONFIG_FILE);
+            Properties properties = new Properties();
+            properties.load(fis);
+            fis.close();
+            System.out.print(properties.getProperty(ROOT_KEY));
 
+            if (properties.containsKey(ROOT_KEY)) {
+                FileTree.setRoot(properties.getProperty(ROOT_KEY));
+                FileTree.populate();
 
+                Server.listen(properties);
+            } else {
+                System.err.print("Root configuration not found.  Please check config file");
+            }
 
-            Server.listen();
         } catch (IOException e) {
             e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
-
         }
     }
 }

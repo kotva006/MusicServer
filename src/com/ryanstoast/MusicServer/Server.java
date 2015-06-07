@@ -8,18 +8,33 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.Properties;
 
 public class Server {
+
+    private static int DEFAULT_PORT = 8000;
+    public static String PORT_KEY = "port";
 
     private static Player player = new Player();
     private static Thread playerThread = new Thread(player, "Android Music Server");
 
-    public static void listen() throws Exception {
-        //start player
+    public static void listen(Properties p) throws Exception {
+        //init player
         playerThread.start();
 
+        int port = DEFAULT_PORT;
+        if (p.containsKey(PORT_KEY)) {
+            try {
+                port = Integer.parseInt(p.getProperty(PORT_KEY));
+            } catch (Exception e) {
+                System.err.println("Error parsing port key. Using default port");
+                e.printStackTrace();
+                port = DEFAULT_PORT;
+            }
+        }
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/music/list", new SongListHandler());
 
         server.createContext("/music/play", new SongPlayHandler());
@@ -32,14 +47,14 @@ public class Server {
 
         server.setExecutor(null); // creates a default executor
         server.start();
+        System.out.println("Server listening on port: " + port);
     }
 
     static class SongListHandler implements HttpHandler {
         public void handle(HttpExchange t) throws IOException {
             //use t to get arguments
-            String response = "This is the response";
             StringBuffer sb = new StringBuffer();
-            sb.append("{songs:[");
+            sb.append("{\"songs\":[");
             for (Map.Entry<Integer,Song> s: FileTree.getSongs().entrySet()) {
                 sb.append(s.getValue().toJSONObject().toString());
                 sb.append(",");
@@ -59,9 +74,15 @@ public class Server {
             Integer songKey = Integer.parseInt(t.getRequestURI().toString().split("/")[3]);
 
             System.err.println(t.getRequestURI().toString() + " " + t.getRequestURI().toString().split("/")[1]);
-            player.play(FileTree.getSongPath(songKey));
 
-            String response = "{status:playing}";
+            String response;
+            if (player.play(FileTree.getSongPath(songKey))) {
+                response = "{\"status\":\"playing\"}";
+            } else {
+                response = "{\"error\":\"song not found\"}";
+            }
+
+
 
             t.sendResponseHeaders(200, response.length());
             OutputStream os = t.getResponseBody();
@@ -75,9 +96,9 @@ public class Server {
             String response;
 
             if (player.pausePlayer()) {
-                response = "{status:paused}";
+                response = "{\"status\":\"paused\"}";
             } else {
-                response = "{status:error}";
+                response = "{\"status\":\"error\"}";
             }
 
             t.sendResponseHeaders(200, response.length());
@@ -92,9 +113,9 @@ public class Server {
             String response;
 
             if (player.stopPlayer()) {
-                response = "{status:stop}";
+                response = "{\"status\":\"stop\"}";
             } else {
-                response = "{status:error}";
+                response = "{\"status\":\"error\"}";
             }
 
             t.sendResponseHeaders(200, response.length());
@@ -109,9 +130,9 @@ public class Server {
             String response;
 
             if (player.resumePlayer()) {
-                response = "{status:playing}";
+                response = "{\"status\":\"playing\"}";
             } else {
-                response = "{status:error}";
+                response = "{\"status\":\"error\"}";
             }
 
             t.sendResponseHeaders(200, response.length());
@@ -128,7 +149,7 @@ public class Server {
             System.err.println(t.getRequestURI().toString() + " " + volume);
             player.setVolume(volume);
 
-            String response = "{status:okay}";
+            String response = "{\"status\":\"okay\"}";
 
             t.sendResponseHeaders(200, response.length());
             OutputStream os = t.getResponseBody();

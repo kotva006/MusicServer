@@ -26,11 +26,17 @@ public class Player extends Application implements Runnable {
 
     public boolean play(String songPath) {
         try {
+            //songPath = "C:\\Users\\Rage\\Music\\30 Seconds to Mars\\This Is War\\04 This Is War.mp3";
+            //File f = new File(songPath);
+            //launch(songPath);
 
             f = new File(songPath);
             media = new Media(f.toURI().toString());
 
             player = new MediaPlayer(media);
+            if (player == null) {
+                return false;
+            }
             player.play();
 
             return true;
